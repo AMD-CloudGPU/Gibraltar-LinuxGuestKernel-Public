@@ -1871,6 +1871,9 @@ static int __init amdgpu_init(void)
 		goto error_fence;
 
 	DRM_INFO("amdgpu kernel modesetting enabled.\n");
+
+	DRM_INFO("amdgpu version: %s\n", AMDGPU_VERSION);
+
 	amdgpu_register_atpx_handler();
 	amdgpu_acpi_detect();
 
@@ -1903,3 +1906,4 @@ module_exit(amdgpu_exit);
 MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESC);
 MODULE_LICENSE("GPL and additional rights");
+MODULE_VERSION(AMDGPU_VERSION);

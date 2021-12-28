@@ -111,6 +111,7 @@
 #include "amdgpu_mca.h"
 
 #define MAX_GPU_INSTANCE		16
+#define AMDGPU_VERSION 			"5.15.0"
 
 struct amdgpu_gpu_instance
 {
