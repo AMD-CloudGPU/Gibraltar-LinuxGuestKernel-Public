@@ -1145,14 +1145,6 @@ int amdgpu_display_framebuffer_init(struct drm_device *dev,
 	if (ret)
 		return ret;
 
-	if (!dev->mode_config.allow_fb_modifiers) {
-		drm_WARN_ONCE(dev, adev->family >= AMDGPU_FAMILY_AI,
-			      "GFX9+ requires FB check based on format modifier\n");
-		ret = check_tiling_flags_gfx6(rfb);
-		if (ret)
-			return ret;
-	}
-
 	if (dev->mode_config.allow_fb_modifiers &&
 	    !(rfb->base.flags & DRM_MODE_FB_MODIFIERS)) {
 		ret = convert_tiling_flags_to_modifier(rfb);
