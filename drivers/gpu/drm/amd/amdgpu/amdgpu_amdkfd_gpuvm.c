@@ -1600,6 +1600,10 @@ int amdgpu_amdkfd_gpuvm_free_memory_of_gpu(
 	drm_vma_node_revoke(&mem->bo->tbo.base.vma_node, drm_priv);
 	if (mem->dmabuf)
 		dma_buf_put(mem->dmabuf);
+	if (mem->bo_pin_flag) {
+		amdgpu_bo_unpin(mem->bo);
+		mem->bo_pin_flag = false;
+	}
 	drm_gem_object_put(&mem->bo->tbo.base);
 	mutex_destroy(&mem->lock);
 	kfree(mem);
@@ -1848,6 +1852,8 @@ int amdgpu_amdkfd_gpuvm_map_gtt_bo_to_kernel(struct kgd_dev *kgd,
 		pr_err("Failed to map bo to kernel. ret %d\n", ret);
 		goto kmap_failed;
 	}
+
+	mem->bo_pin_flag = true;
 
 	amdgpu_amdkfd_remove_eviction_fence(
 		bo, mem->process_info->eviction_fence);

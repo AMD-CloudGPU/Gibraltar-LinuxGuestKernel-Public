@@ -81,6 +81,7 @@ struct kgd_mem {
 
 	bool aql_queue;
 	bool is_imported;
+	bool bo_pin_flag;
 };
 
 /* KFD Memory Eviction */
