@@ -306,6 +306,9 @@ struct psp_context
 	/* toc firmware */
 	const struct firmware		*toc_fw;
 
+	/* cap firmware */
+	const struct firmware		*cap_fw;
+
 	/* fence buffer */
 	struct amdgpu_bo		*fence_buf_bo;
 	uint64_t			fence_buf_mc_addr;
@@ -326,6 +329,11 @@ struct psp_context
 	/* xgmi ta firmware and buffer */
 	const struct firmware		*ta_fw;
 	uint32_t			ta_fw_version;
+
+	uint32_t			cap_fw_version;
+	uint32_t			cap_feature_version;
+	uint32_t			cap_ucode_size;
+
 	struct psp_bin_desc		xgmi;
 	struct psp_bin_desc		ras;
 	struct psp_bin_desc		hdcp;
@@ -445,6 +453,8 @@ int psp_init_toc_microcode(struct psp_context *psp,
 int psp_init_sos_microcode(struct psp_context *psp,
 			   const char *chip_name);
 int psp_init_ta_microcode(struct psp_context *psp,
+			  const char *chip_name);
+int psp_init_cap_microcode(struct psp_context *psp,
 			  const char *chip_name);
 int psp_get_fw_attestation_records_addr(struct psp_context *psp,
 					uint64_t *output_ptr);
