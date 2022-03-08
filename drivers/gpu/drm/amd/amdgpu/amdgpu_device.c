@@ -4463,6 +4463,8 @@ int amdgpu_device_pre_asic_reset(struct amdgpu_device *adev,
 	if (reset_context->reset_req_dev == adev)
 		job = reset_context->job;
 
+	amdgpu_debugfs_wait_dump(adev);
+
 	if (amdgpu_sriov_vf(adev)) {
 		/* stop the data exchange thread */
 		amdgpu_virt_fini_data_exchange(adev);
