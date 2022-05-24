@@ -81,6 +81,10 @@ static int  amdgpu_debugfs_process_reg_op(bool read, struct file *f,
 			((*pos & (1ULL << 62)) && (*pos & (1ULL << 61))))
 		return -EINVAL;
 
+	/* force skip KIQ for debug purpose */
+	if (amdgpu_sriov_vf(adev))
+		adev->virt.caps &= ~AMDGPU_SRIOV_CAPS_RUNTIME;
+
 	/* are we reading registers for which a PG lock is necessary? */
 	pm_pg_lock = (*pos >> 23) & 1;
 
@@ -127,6 +131,8 @@ static int  amdgpu_debugfs_process_reg_op(bool read, struct file *f,
 		    (se_bank != 0xFFFFFFFF && se_bank >= adev->gfx.config.max_shader_engines)) {
 			pm_runtime_mark_last_busy(adev_to_drm(adev)->dev);
 			pm_runtime_put_autosuspend(adev_to_drm(adev)->dev);
+			if (amdgpu_sriov_vf(adev))
+				adev->virt.caps |= AMDGPU_SRIOV_CAPS_RUNTIME;
 			amdgpu_virt_disable_access_debugfs(adev);
 			return -EINVAL;
 		}
@@ -1509,6 +1515,7 @@ int amdgpu_debugfs_init(struct amdgpu_device *adev)
 	}
 
 	amdgpu_ras_debugfs_create_all(adev);
+	amdgpu_virt_create_debugs(adev);
 	amdgpu_rap_debugfs_init(adev);
 	amdgpu_securedisplay_debugfs_init(adev);
 	amdgpu_fw_attestation_debugfs_init(adev);

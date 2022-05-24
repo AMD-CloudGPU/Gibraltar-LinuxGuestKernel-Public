@@ -3263,7 +3263,7 @@ bool amdgpu_device_asic_has_dc_support(enum amd_asic_type asic_type)
  */
 bool amdgpu_device_has_dc_support(struct amdgpu_device *adev)
 {
-	if (amdgpu_sriov_vf(adev) || 
+	if (amdgpu_sriov_vf(adev) ||
 	    adev->enable_virtual_display ||
 	    (adev->harvest_ip_mask & AMD_HARVEST_IP_DMU_MASK))
 		return false;
@@ -4462,6 +4462,10 @@ int amdgpu_device_pre_asic_reset(struct amdgpu_device *adev,
 
 	if (reset_context->reset_req_dev == adev)
 		job = reset_context->job;
+
+	if (amdgpu_sriov_vf(adev))
+		if (!amdgpu_virt_notify_booked(adev, job))
+			amdgpu_virt_wait_dump(adev, MAX_SCHEDULE_TIMEOUT);
 
 	if (amdgpu_sriov_vf(adev)) {
 		/* stop the data exchange thread */
