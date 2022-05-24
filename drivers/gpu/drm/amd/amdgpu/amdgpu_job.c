@@ -66,8 +66,6 @@ static enum drm_gpu_sched_stat amdgpu_job_timedout(struct drm_sched_job *s_job)
 		amdgpu_device_gpu_recover(ring->adev, job);
 	} else {
 		drm_sched_suspend_timeout(&ring->sched);
-		if (amdgpu_sriov_vf(adev))
-			adev->virt.tdr_debug = true;
 	}
 
 exit:

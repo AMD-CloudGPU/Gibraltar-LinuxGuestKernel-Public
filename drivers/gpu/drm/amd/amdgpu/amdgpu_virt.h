@@ -225,7 +225,6 @@ struct amdgpu_virt {
 	struct amdgpu_virt_fw_reserve	fw_reserve;
 	uint32_t gim_feature;
 	int req_init_data_ver;
-	bool tdr_debug;
 	struct amdgpu_virt_ras_err_handler_data *virt_eh_data;
 	bool ras_init_done;
 	uint32_t reg_access;
@@ -300,10 +299,6 @@ static inline bool is_virtual_machine(void)
 
 #define amdgpu_sriov_is_pp_one_vf(adev) \
 	((adev)->virt.gim_feature & AMDGIM_FEATURE_PP_ONE_VF)
-#define amdgpu_sriov_is_debug(adev) \
-	((!amdgpu_in_reset(adev)) && adev->virt.tdr_debug)
-#define amdgpu_sriov_is_normal(adev) \
-	((!amdgpu_in_reset(adev)) && (!adev->virt.tdr_debug))
 
 bool amdgpu_virt_mmio_blocked(struct amdgpu_device *adev);
 void amdgpu_virt_init_setting(struct amdgpu_device *adev);
@@ -325,10 +320,6 @@ int amdgpu_virt_create_debugs(struct amdgpu_device *);
 void amdgpu_virt_remove_debugfs(struct amdgpu_device *);
 int amdgpu_virt_notify_booked(struct amdgpu_device *, struct amdgpu_job *);
 int amdgpu_virt_wait_dump(struct amdgpu_device *, unsigned long tmo);
-
-bool amdgpu_virt_can_access_debugfs(struct amdgpu_device *adev);
-int amdgpu_virt_enable_access_debugfs(struct amdgpu_device *adev);
-void amdgpu_virt_disable_access_debugfs(struct amdgpu_device *adev);
 
 enum amdgpu_sriov_vf_mode amdgpu_virt_get_sriov_vf_mode(struct amdgpu_device *adev);
 
