@@ -1549,17 +1549,16 @@ static u32 gfx_v10_rlcg_rw(struct amdgpu_device *adev, u32 offset, u32 v, uint32
 	grbm_cntl = adev->reg_offset[GC_HWIP][0][mmGRBM_GFX_CNTL_BASE_IDX] + mmGRBM_GFX_CNTL;
 	grbm_idx = adev->reg_offset[GC_HWIP][0][mmGRBM_GFX_INDEX_BASE_IDX] + mmGRBM_GFX_INDEX;
 
-	if (offset == grbm_cntl || offset == grbm_idx) {
-		if (offset  == grbm_cntl)
-			writel(v, scratch_reg2);
-		else if (offset == grbm_idx)
-			writel(v, scratch_reg3);
-
+	if (offset == grbm_idx) {
+		writel(v, scratch_reg3);
 		writel(v, ((void __iomem *)adev->rmmio) + (offset * 4));
 	} else {
 		writel(v, scratch_reg0);
 		writel(offset | flag, scratch_reg1);
 		writel(1, spare_int);
+
+		if (offset == grbm_cntl)
+			writel(v, scratch_reg2);
 
 		for (i = 0; i < retries; i++) {
 			tmp = readl(scratch_reg1);
