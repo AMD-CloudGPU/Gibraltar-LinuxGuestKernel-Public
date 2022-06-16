@@ -347,6 +347,7 @@ void nv_grbm_select(struct amdgpu_device *adev,
 	grbm_gfx_cntl = REG_SET_FIELD(grbm_gfx_cntl, GRBM_GFX_CNTL, QUEUEID, queue);
 
 	WREG32_SOC15(GC, 0, mmGRBM_GFX_CNTL, grbm_gfx_cntl);
+	adev->grbm_gfx_cntl = grbm_gfx_cntl;
 }
 
 static void nv_vga_set_state(struct amdgpu_device *adev, bool state)

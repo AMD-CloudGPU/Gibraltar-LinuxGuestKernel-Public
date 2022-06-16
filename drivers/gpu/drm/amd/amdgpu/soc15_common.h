@@ -45,6 +45,14 @@
 				~REG_FIELD_MASK(reg, field)) | (val) << REG_FIELD_SHIFT(reg, field), \
 			      0, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0)
 
+#define WREG32_FIELD15_GRBM(ip, idx, reg, field, val, select, shadow)	\
+	 __WREG32_SOC15_RLC__(adev->reg_offset[ip##_HWIP][idx][mm##reg##_BASE_IDX] + mm##reg,	\
+				(__RREG32_SOC15_RLC__( \
+					adev->reg_offset[ip##_HWIP][idx][mm##reg##_BASE_IDX] + mm##reg, \
+					0, ip##_HWIP, select, shadow) & \
+				~REG_FIELD_MASK(reg, field)) | (val) << REG_FIELD_SHIFT(reg, field), \
+			      0, ip##_HWIP, select, shadow)
+
 #define RREG32_SOC15(ip, inst, reg) \
 	__RREG32_SOC15_RLC__(adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg, \
 			 0, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0)

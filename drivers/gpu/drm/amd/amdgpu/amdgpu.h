@@ -1089,6 +1089,7 @@ struct amdgpu_device {
 	pci_channel_state_t		pci_channel_state;
 
 	struct amdgpu_reset_control     *reset_cntl;
+	u32 grbm_gfx_cntl;
 };
 
 static inline struct amdgpu_device *drm_to_adev(struct drm_device *ddev)

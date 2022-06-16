@@ -5151,8 +5151,8 @@ static void gfx_v10_0_init_compute_vmid(struct amdgpu_device *adev)
 	for (i = adev->vm_manager.first_kfd_vmid; i < AMDGPU_NUM_VMID; i++) {
 		nv_grbm_select(adev, 0, 0, 0, i);
 		/* CP and shaders */
-		WREG32_SOC15(GC, 0, mmSH_MEM_CONFIG, DEFAULT_SH_MEM_CONFIG);
-		WREG32_SOC15(GC, 0, mmSH_MEM_BASES, sh_mem_bases);
+		WREG32_SOC15_GRBM(GC, 0, mmSH_MEM_CONFIG, DEFAULT_SH_MEM_CONFIG, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+		WREG32_SOC15_GRBM(GC, 0, mmSH_MEM_BASES, sh_mem_bases,  AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 	}
 	nv_grbm_select(adev, 0, 0, 0, 0);
 	mutex_unlock(&adev->srbm_mutex);
@@ -5290,13 +5290,13 @@ static void gfx_v10_0_constants_init(struct amdgpu_device *adev)
 	for (i = 0; i < adev->vm_manager.id_mgr[AMDGPU_GFXHUB_0].num_ids; i++) {
 		nv_grbm_select(adev, 0, 0, 0, i);
 		/* CP and shaders */
-		WREG32_SOC15(GC, 0, mmSH_MEM_CONFIG, DEFAULT_SH_MEM_CONFIG);
+		WREG32_SOC15_GRBM(GC, 0, mmSH_MEM_CONFIG, DEFAULT_SH_MEM_CONFIG, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 		if (i != 0) {
 			tmp = REG_SET_FIELD(0, SH_MEM_BASES, PRIVATE_BASE,
 				(adev->gmc.private_aperture_start >> 48));
 			tmp = REG_SET_FIELD(tmp, SH_MEM_BASES, SHARED_BASE,
 				(adev->gmc.shared_aperture_start >> 48));
-			WREG32_SOC15(GC, 0, mmSH_MEM_BASES, tmp);
+			WREG32_SOC15_GRBM(GC, 0, mmSH_MEM_BASES, tmp, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 		}
 	}
 	nv_grbm_select(adev, 0, 0, 0, 0);
@@ -6326,6 +6326,7 @@ static void gfx_v10_0_cp_gfx_switch_pipe(struct amdgpu_device *adev,
 	tmp = REG_SET_FIELD(tmp, GRBM_GFX_CNTL, PIPEID, pipe);
 
 	WREG32_SOC15(GC, 0, mmGRBM_GFX_CNTL, tmp);
+	adev->grbm_gfx_cntl = tmp;
 }
 
 static void gfx_v10_0_cp_gfx_set_doorbell(struct amdgpu_device *adev,
@@ -6334,7 +6335,7 @@ static void gfx_v10_0_cp_gfx_set_doorbell(struct amdgpu_device *adev,
 	u32 tmp;
 
 	if (!amdgpu_async_gfx_ring) {
-		tmp = RREG32_SOC15(GC, 0, mmCP_RB_DOORBELL_CONTROL);
+		tmp = RREG32_SOC15_GRBM(GC, 0, mmCP_RB_DOORBELL_CONTROL, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 		if (ring->use_doorbell) {
 			tmp = REG_SET_FIELD(tmp, CP_RB_DOORBELL_CONTROL,
 						DOORBELL_OFFSET, ring->doorbell_index);
@@ -6344,7 +6345,7 @@ static void gfx_v10_0_cp_gfx_set_doorbell(struct amdgpu_device *adev,
 			tmp = REG_SET_FIELD(tmp, CP_RB_DOORBELL_CONTROL,
 						DOORBELL_EN, 0);
 		}
-		WREG32_SOC15(GC, 0, mmCP_RB_DOORBELL_CONTROL, tmp);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_RB_DOORBELL_CONTROL, tmp, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 	}
 	switch (adev->asic_type) {
 	case CHIP_SIENNA_CICHLID:
@@ -6363,10 +6364,10 @@ static void gfx_v10_0_cp_gfx_set_doorbell(struct amdgpu_device *adev,
 	default:
 		tmp = REG_SET_FIELD(0, CP_RB_DOORBELL_RANGE_LOWER,
 				    DOORBELL_RANGE_LOWER, ring->doorbell_index);
-		WREG32_SOC15(GC, 0, mmCP_RB_DOORBELL_RANGE_LOWER, tmp);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_RB_DOORBELL_RANGE_LOWER, tmp, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
-		WREG32_SOC15(GC, 0, mmCP_RB_DOORBELL_RANGE_UPPER,
-			     CP_RB_DOORBELL_RANGE_UPPER__DOORBELL_RANGE_UPPER_MASK);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_RB_DOORBELL_RANGE_UPPER,
+			     CP_RB_DOORBELL_RANGE_UPPER__DOORBELL_RANGE_UPPER_MASK, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 		break;
 	}
 }
@@ -6397,33 +6398,33 @@ static int gfx_v10_0_cp_gfx_resume(struct amdgpu_device *adev)
 #ifdef __BIG_ENDIAN
 	tmp = REG_SET_FIELD(tmp, CP_RB0_CNTL, BUF_SWAP, 1);
 #endif
-	WREG32_SOC15(GC, 0, mmCP_RB0_CNTL, tmp);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_RB0_CNTL, tmp, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* Initialize the ring buffer's write pointers */
 	ring->wptr = 0;
-	WREG32_SOC15(GC, 0, mmCP_RB0_WPTR, lower_32_bits(ring->wptr));
-	WREG32_SOC15(GC, 0, mmCP_RB0_WPTR_HI, upper_32_bits(ring->wptr));
+	WREG32_SOC15_GRBM(GC, 0, mmCP_RB0_WPTR, lower_32_bits(ring->wptr), AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_RB0_WPTR_HI, upper_32_bits(ring->wptr), AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* set the wb address wether it's enabled or not */
 	rptr_addr = adev->wb.gpu_addr + (ring->rptr_offs * 4);
-	WREG32_SOC15(GC, 0, mmCP_RB0_RPTR_ADDR, lower_32_bits(rptr_addr));
-	WREG32_SOC15(GC, 0, mmCP_RB0_RPTR_ADDR_HI, upper_32_bits(rptr_addr) &
-		     CP_RB_RPTR_ADDR_HI__RB_RPTR_ADDR_HI_MASK);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_RB0_RPTR_ADDR, lower_32_bits(rptr_addr), AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_RB0_RPTR_ADDR_HI, upper_32_bits(rptr_addr) &
+		     CP_RB_RPTR_ADDR_HI__RB_RPTR_ADDR_HI_MASK, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	wptr_gpu_addr = adev->wb.gpu_addr + (ring->wptr_offs * 4);
-	WREG32_SOC15(GC, 0, mmCP_RB_WPTR_POLL_ADDR_LO,
-		     lower_32_bits(wptr_gpu_addr));
-	WREG32_SOC15(GC, 0, mmCP_RB_WPTR_POLL_ADDR_HI,
-		     upper_32_bits(wptr_gpu_addr));
+	WREG32_SOC15_GRBM(GC, 0, mmCP_RB_WPTR_POLL_ADDR_LO,
+		     lower_32_bits(wptr_gpu_addr), AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_RB_WPTR_POLL_ADDR_HI,
+		     upper_32_bits(wptr_gpu_addr), AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	mdelay(1);
-	WREG32_SOC15(GC, 0, mmCP_RB0_CNTL, tmp);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_RB0_CNTL, tmp, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	rb_addr = ring->gpu_addr >> 8;
-	WREG32_SOC15(GC, 0, mmCP_RB0_BASE, rb_addr);
-	WREG32_SOC15(GC, 0, mmCP_RB0_BASE_HI, upper_32_bits(rb_addr));
+	WREG32_SOC15_GRBM(GC, 0, mmCP_RB0_BASE, rb_addr, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_RB0_BASE_HI, upper_32_bits(rb_addr), AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
-	WREG32_SOC15(GC, 0, mmCP_RB_ACTIVE, 1);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_RB_ACTIVE, 1, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	gfx_v10_0_cp_gfx_set_doorbell(adev, ring);
 	mutex_unlock(&adev->srbm_mutex);
@@ -6437,29 +6438,29 @@ static int gfx_v10_0_cp_gfx_resume(struct amdgpu_device *adev)
 		rb_bufsz = order_base_2(ring->ring_size / 8);
 		tmp = REG_SET_FIELD(0, CP_RB1_CNTL, RB_BUFSZ, rb_bufsz);
 		tmp = REG_SET_FIELD(tmp, CP_RB1_CNTL, RB_BLKSZ, rb_bufsz - 2);
-		WREG32_SOC15(GC, 0, mmCP_RB1_CNTL, tmp);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_RB1_CNTL, tmp, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 		/* Initialize the ring buffer's write pointers */
 		ring->wptr = 0;
-		WREG32_SOC15(GC, 0, mmCP_RB1_WPTR, lower_32_bits(ring->wptr));
-		WREG32_SOC15(GC, 0, mmCP_RB1_WPTR_HI, upper_32_bits(ring->wptr));
+		WREG32_SOC15_GRBM(GC, 0, mmCP_RB1_WPTR, lower_32_bits(ring->wptr), AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_RB1_WPTR_HI, upper_32_bits(ring->wptr), AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 		/* Set the wb address wether it's enabled or not */
 		rptr_addr = adev->wb.gpu_addr + (ring->rptr_offs * 4);
-		WREG32_SOC15(GC, 0, mmCP_RB1_RPTR_ADDR, lower_32_bits(rptr_addr));
-		WREG32_SOC15(GC, 0, mmCP_RB1_RPTR_ADDR_HI, upper_32_bits(rptr_addr) &
-			     CP_RB1_RPTR_ADDR_HI__RB_RPTR_ADDR_HI_MASK);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_RB1_RPTR_ADDR, lower_32_bits(rptr_addr), AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_RB1_RPTR_ADDR_HI, upper_32_bits(rptr_addr) &
+			     CP_RB1_RPTR_ADDR_HI__RB_RPTR_ADDR_HI_MASK, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 		wptr_gpu_addr = adev->wb.gpu_addr + (ring->wptr_offs * 4);
-		WREG32_SOC15(GC, 0, mmCP_RB_WPTR_POLL_ADDR_LO,
-			     lower_32_bits(wptr_gpu_addr));
-		WREG32_SOC15(GC, 0, mmCP_RB_WPTR_POLL_ADDR_HI,
-			     upper_32_bits(wptr_gpu_addr));
+		WREG32_SOC15_GRBM(GC, 0, mmCP_RB_WPTR_POLL_ADDR_LO,
+			     lower_32_bits(wptr_gpu_addr), AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_RB_WPTR_POLL_ADDR_HI,
+			     upper_32_bits(wptr_gpu_addr), AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 		mdelay(1);
-		WREG32_SOC15(GC, 0, mmCP_RB1_CNTL, tmp);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_RB1_CNTL, tmp, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 		rb_addr = ring->gpu_addr >> 8;
-		WREG32_SOC15(GC, 0, mmCP_RB1_BASE, rb_addr);
-		WREG32_SOC15(GC, 0, mmCP_RB1_BASE_HI, upper_32_bits(rb_addr));
-		WREG32_SOC15(GC, 0, mmCP_RB1_ACTIVE, 1);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_RB1_BASE, rb_addr, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_RB1_BASE_HI, upper_32_bits(rb_addr), AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_RB1_ACTIVE, 1, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 		gfx_v10_0_cp_gfx_set_doorbell(adev, ring);
 		mutex_unlock(&adev->srbm_mutex);
@@ -6637,25 +6638,25 @@ static int gfx_v10_0_gfx_mqd_init(struct amdgpu_ring *ring)
 	mqd->cp_mqd_base_addr_hi = upper_32_bits(ring->mqd_gpu_addr);
 
 	/* set up mqd control */
-	tmp = RREG32_SOC15(GC, 0, mmCP_GFX_MQD_CONTROL);
+	tmp = RREG32_SOC15_GRBM(GC, 0, mmCP_GFX_MQD_CONTROL, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 	tmp = REG_SET_FIELD(tmp, CP_GFX_MQD_CONTROL, VMID, 0);
 	tmp = REG_SET_FIELD(tmp, CP_GFX_MQD_CONTROL, PRIV_STATE, 1);
 	tmp = REG_SET_FIELD(tmp, CP_GFX_MQD_CONTROL, CACHE_POLICY, 0);
 	mqd->cp_gfx_mqd_control = tmp;
 
 	/* set up gfx_hqd_vimd with 0x0 to indicate the ring buffer's vmid */
-	tmp = RREG32_SOC15(GC, 0, mmCP_GFX_HQD_VMID);
+	tmp = RREG32_SOC15_GRBM(GC, 0, mmCP_GFX_HQD_VMID, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 	tmp = REG_SET_FIELD(tmp, CP_GFX_HQD_VMID, VMID, 0);
 	mqd->cp_gfx_hqd_vmid = 0;
 
 	/* set up default queue priority level
 	 * 0x0 = low priority, 0x1 = high priority */
-	tmp = RREG32_SOC15(GC, 0, mmCP_GFX_HQD_QUEUE_PRIORITY);
+	tmp = RREG32_SOC15_GRBM(GC, 0, mmCP_GFX_HQD_QUEUE_PRIORITY, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 	tmp = REG_SET_FIELD(tmp, CP_GFX_HQD_QUEUE_PRIORITY, PRIORITY_LEVEL, 0);
 	mqd->cp_gfx_hqd_queue_priority = tmp;
 
 	/* set up time quantum */
-	tmp = RREG32_SOC15(GC, 0, mmCP_GFX_HQD_QUANTUM);
+	tmp = RREG32_SOC15_GRBM(GC, 0, mmCP_GFX_HQD_QUANTUM, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 	tmp = REG_SET_FIELD(tmp, CP_GFX_HQD_QUANTUM, QUANTUM_EN, 1);
 	mqd->cp_gfx_hqd_quantum = tmp;
 
@@ -6677,7 +6678,7 @@ static int gfx_v10_0_gfx_mqd_init(struct amdgpu_ring *ring)
 
 	/* set up the gfx_hqd_control, similar as CP_RB0_CNTL */
 	rb_bufsz = order_base_2(ring->ring_size / 4) - 1;
-	tmp = RREG32_SOC15(GC, 0, mmCP_GFX_HQD_CNTL);
+	tmp = RREG32_SOC15_GRBM(GC, 0, mmCP_GFX_HQD_CNTL, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 	tmp = REG_SET_FIELD(tmp, CP_GFX_HQD_CNTL, RB_BUFSZ, rb_bufsz);
 	tmp = REG_SET_FIELD(tmp, CP_GFX_HQD_CNTL, RB_BLKSZ, rb_bufsz - 2);
 #ifdef __BIG_ENDIAN
@@ -6686,7 +6687,7 @@ static int gfx_v10_0_gfx_mqd_init(struct amdgpu_ring *ring)
 	mqd->cp_gfx_hqd_cntl = tmp;
 
 	/* set up cp_doorbell_control */
-	tmp = RREG32_SOC15(GC, 0, mmCP_RB_DOORBELL_CONTROL);
+	tmp = RREG32_SOC15_GRBM(GC, 0, mmCP_RB_DOORBELL_CONTROL, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 	if (ring->use_doorbell) {
 		tmp = REG_SET_FIELD(tmp, CP_RB_DOORBELL_CONTROL,
 				    DOORBELL_OFFSET, ring->doorbell_index);
@@ -6704,7 +6705,7 @@ static int gfx_v10_0_gfx_mqd_init(struct amdgpu_ring *ring)
 
 	/* reset read and write pointers, similar to CP_RB0_WPTR/_RPTR */
 	ring->wptr = 0;
-	mqd->cp_gfx_hqd_rptr = RREG32_SOC15(GC, 0, mmCP_GFX_HQD_RPTR);
+	mqd->cp_gfx_hqd_rptr = RREG32_SOC15_GRBM(GC, 0, mmCP_GFX_HQD_RPTR, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* active the queue */
 	mqd->cp_gfx_hqd_active = 1;
@@ -6897,14 +6898,14 @@ static int gfx_v10_0_compute_mqd_init(struct amdgpu_ring *ring)
 	mqd->cp_hqd_eop_base_addr_hi = upper_32_bits(eop_base_addr);
 
 	/* set the EOP size, register value is 2^(EOP_SIZE+1) dwords */
-	tmp = RREG32_SOC15(GC, 0, mmCP_HQD_EOP_CONTROL);
+	tmp = RREG32_SOC15_GRBM(GC, 0, mmCP_HQD_EOP_CONTROL, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 	tmp = REG_SET_FIELD(tmp, CP_HQD_EOP_CONTROL, EOP_SIZE,
 			(order_base_2(GFX10_MEC_HPD_SIZE / 4) - 1));
 
 	mqd->cp_hqd_eop_control = tmp;
 
 	/* enable doorbell? */
-	tmp = RREG32_SOC15(GC, 0, mmCP_HQD_PQ_DOORBELL_CONTROL);
+	tmp = RREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_DOORBELL_CONTROL, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	if (ring->use_doorbell) {
 		tmp = REG_SET_FIELD(tmp, CP_HQD_PQ_DOORBELL_CONTROL,
@@ -6934,7 +6935,7 @@ static int gfx_v10_0_compute_mqd_init(struct amdgpu_ring *ring)
 	mqd->cp_mqd_base_addr_hi = upper_32_bits(ring->mqd_gpu_addr);
 
 	/* set MQD vmid to 0 */
-	tmp = RREG32_SOC15(GC, 0, mmCP_MQD_CONTROL);
+	tmp = RREG32_SOC15_GRBM(GC, 0, mmCP_MQD_CONTROL, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 	tmp = REG_SET_FIELD(tmp, CP_MQD_CONTROL, VMID, 0);
 	mqd->cp_mqd_control = tmp;
 
@@ -6944,7 +6945,7 @@ static int gfx_v10_0_compute_mqd_init(struct amdgpu_ring *ring)
 	mqd->cp_hqd_pq_base_hi = upper_32_bits(hqd_gpu_addr);
 
 	/* set up the HQD, this is similar to CP_RB0_CNTL */
-	tmp = RREG32_SOC15(GC, 0, mmCP_HQD_PQ_CONTROL);
+	tmp = RREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_CONTROL, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 	tmp = REG_SET_FIELD(tmp, CP_HQD_PQ_CONTROL, QUEUE_SIZE,
 			    (order_base_2(ring->ring_size / 4) - 1));
 	tmp = REG_SET_FIELD(tmp, CP_HQD_PQ_CONTROL, RPTR_BLOCK_SIZE,
@@ -6972,7 +6973,7 @@ static int gfx_v10_0_compute_mqd_init(struct amdgpu_ring *ring)
 	tmp = 0;
 	/* enable the doorbell if requested */
 	if (ring->use_doorbell) {
-		tmp = RREG32_SOC15(GC, 0, mmCP_HQD_PQ_DOORBELL_CONTROL);
+		tmp = RREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_DOORBELL_CONTROL, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 		tmp = REG_SET_FIELD(tmp, CP_HQD_PQ_DOORBELL_CONTROL,
 				DOORBELL_OFFSET, ring->doorbell_index);
 
@@ -6988,17 +6989,17 @@ static int gfx_v10_0_compute_mqd_init(struct amdgpu_ring *ring)
 
 	/* reset read and write pointers, similar to CP_RB0_WPTR/_RPTR */
 	ring->wptr = 0;
-	mqd->cp_hqd_pq_rptr = RREG32_SOC15(GC, 0, mmCP_HQD_PQ_RPTR);
+	mqd->cp_hqd_pq_rptr = RREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_RPTR, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* set the vmid for the queue */
 	mqd->cp_hqd_vmid = 0;
 
-	tmp = RREG32_SOC15(GC, 0, mmCP_HQD_PERSISTENT_STATE);
+	tmp = RREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PERSISTENT_STATE, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 	tmp = REG_SET_FIELD(tmp, CP_HQD_PERSISTENT_STATE, PRELOAD_SIZE, 0x53);
 	mqd->cp_hqd_persistent_state = tmp;
 
 	/* set MIN_IB_AVAIL_SIZE */
-	tmp = RREG32_SOC15(GC, 0, mmCP_HQD_IB_CONTROL);
+	tmp = RREG32_SOC15_GRBM(GC, 0, mmCP_HQD_IB_CONTROL, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 	tmp = REG_SET_FIELD(tmp, CP_HQD_IB_CONTROL, MIN_IB_AVAIL_SIZE, 3);
 	mqd->cp_hqd_ib_control = tmp;
 
@@ -7022,104 +7023,104 @@ static int gfx_v10_0_kiq_init_register(struct amdgpu_ring *ring)
 
 	/* inactivate the queue */
 	if (amdgpu_sriov_vf(adev))
-		WREG32_SOC15(GC, 0, mmCP_HQD_ACTIVE, 0);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_ACTIVE, 0, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* disable wptr polling */
-	WREG32_FIELD15(GC, 0, CP_PQ_WPTR_POLL_CNTL, EN, 0);
+	WREG32_FIELD15_GRBM(GC, 0, CP_PQ_WPTR_POLL_CNTL, EN, 0, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* write the EOP addr */
-	WREG32_SOC15(GC, 0, mmCP_HQD_EOP_BASE_ADDR,
-	       mqd->cp_hqd_eop_base_addr_lo);
-	WREG32_SOC15(GC, 0, mmCP_HQD_EOP_BASE_ADDR_HI,
-	       mqd->cp_hqd_eop_base_addr_hi);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_EOP_BASE_ADDR,
+	       mqd->cp_hqd_eop_base_addr_lo, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_EOP_BASE_ADDR_HI,
+	       mqd->cp_hqd_eop_base_addr_hi, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* set the EOP size, register value is 2^(EOP_SIZE+1) dwords */
-	WREG32_SOC15(GC, 0, mmCP_HQD_EOP_CONTROL,
-	       mqd->cp_hqd_eop_control);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_EOP_CONTROL,
+	       mqd->cp_hqd_eop_control, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* enable doorbell? */
-	WREG32_SOC15(GC, 0, mmCP_HQD_PQ_DOORBELL_CONTROL,
-	       mqd->cp_hqd_pq_doorbell_control);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_DOORBELL_CONTROL,
+	       mqd->cp_hqd_pq_doorbell_control, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* disable the queue if it's active */
-	if (RREG32_SOC15(GC, 0, mmCP_HQD_ACTIVE) & 1) {
-		WREG32_SOC15(GC, 0, mmCP_HQD_DEQUEUE_REQUEST, 1);
+	if (RREG32_SOC15_GRBM(GC, 0, mmCP_HQD_ACTIVE, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl) & 1) {
+		WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_DEQUEUE_REQUEST, 1, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 		for (j = 0; j < adev->usec_timeout; j++) {
-			if (!(RREG32_SOC15(GC, 0, mmCP_HQD_ACTIVE) & 1))
+			if (!(RREG32_SOC15_GRBM(GC, 0, mmCP_HQD_ACTIVE, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl) & 1))
 				break;
 			udelay(1);
 		}
-		WREG32_SOC15(GC, 0, mmCP_HQD_DEQUEUE_REQUEST,
-		       mqd->cp_hqd_dequeue_request);
-		WREG32_SOC15(GC, 0, mmCP_HQD_PQ_RPTR,
-		       mqd->cp_hqd_pq_rptr);
-		WREG32_SOC15(GC, 0, mmCP_HQD_PQ_WPTR_LO,
-		       mqd->cp_hqd_pq_wptr_lo);
-		WREG32_SOC15(GC, 0, mmCP_HQD_PQ_WPTR_HI,
-		       mqd->cp_hqd_pq_wptr_hi);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_DEQUEUE_REQUEST,
+		       mqd->cp_hqd_dequeue_request, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_RPTR,
+		       mqd->cp_hqd_pq_rptr, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_WPTR_LO,
+		       mqd->cp_hqd_pq_wptr_lo, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_WPTR_HI,
+		       mqd->cp_hqd_pq_wptr_hi, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 	}
 
 	/* set the pointer to the MQD */
-	WREG32_SOC15(GC, 0, mmCP_MQD_BASE_ADDR,
-	       mqd->cp_mqd_base_addr_lo);
-	WREG32_SOC15(GC, 0, mmCP_MQD_BASE_ADDR_HI,
-	       mqd->cp_mqd_base_addr_hi);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_MQD_BASE_ADDR,
+	       mqd->cp_mqd_base_addr_lo, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_MQD_BASE_ADDR_HI,
+	       mqd->cp_mqd_base_addr_hi, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* set MQD vmid to 0 */
-	WREG32_SOC15(GC, 0, mmCP_MQD_CONTROL,
-	       mqd->cp_mqd_control);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_MQD_CONTROL,
+	       mqd->cp_mqd_control, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* set the pointer to the HQD, this is similar CP_RB0_BASE/_HI */
-	WREG32_SOC15(GC, 0, mmCP_HQD_PQ_BASE,
-	       mqd->cp_hqd_pq_base_lo);
-	WREG32_SOC15(GC, 0, mmCP_HQD_PQ_BASE_HI,
-	       mqd->cp_hqd_pq_base_hi);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_BASE,
+	       mqd->cp_hqd_pq_base_lo, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_BASE_HI,
+	       mqd->cp_hqd_pq_base_hi, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* set up the HQD, this is similar to CP_RB0_CNTL */
-	WREG32_SOC15(GC, 0, mmCP_HQD_PQ_CONTROL,
-	       mqd->cp_hqd_pq_control);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_CONTROL,
+	       mqd->cp_hqd_pq_control, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* set the wb address whether it's enabled or not */
-	WREG32_SOC15(GC, 0, mmCP_HQD_PQ_RPTR_REPORT_ADDR,
-		mqd->cp_hqd_pq_rptr_report_addr_lo);
-	WREG32_SOC15(GC, 0, mmCP_HQD_PQ_RPTR_REPORT_ADDR_HI,
-		mqd->cp_hqd_pq_rptr_report_addr_hi);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_RPTR_REPORT_ADDR,
+		mqd->cp_hqd_pq_rptr_report_addr_lo, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_RPTR_REPORT_ADDR_HI,
+		mqd->cp_hqd_pq_rptr_report_addr_hi, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* only used if CP_PQ_WPTR_POLL_CNTL.CP_PQ_WPTR_POLL_CNTL__EN_MASK=1 */
-	WREG32_SOC15(GC, 0, mmCP_HQD_PQ_WPTR_POLL_ADDR,
-	       mqd->cp_hqd_pq_wptr_poll_addr_lo);
-	WREG32_SOC15(GC, 0, mmCP_HQD_PQ_WPTR_POLL_ADDR_HI,
-	       mqd->cp_hqd_pq_wptr_poll_addr_hi);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_WPTR_POLL_ADDR,
+	       mqd->cp_hqd_pq_wptr_poll_addr_lo, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_WPTR_POLL_ADDR_HI,
+	       mqd->cp_hqd_pq_wptr_poll_addr_hi, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* enable the doorbell if requested */
 	if (ring->use_doorbell) {
-		WREG32_SOC15(GC, 0, mmCP_MEC_DOORBELL_RANGE_LOWER,
-			(adev->doorbell_index.kiq * 2) << 2);
-		WREG32_SOC15(GC, 0, mmCP_MEC_DOORBELL_RANGE_UPPER,
-			(adev->doorbell_index.userqueue_end * 2) << 2);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_MEC_DOORBELL_RANGE_LOWER,
+			(adev->doorbell_index.kiq * 2) << 2, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+		WREG32_SOC15_GRBM(GC, 0, mmCP_MEC_DOORBELL_RANGE_UPPER,
+			(adev->doorbell_index.userqueue_end * 2) << 2, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 	}
 
-	WREG32_SOC15(GC, 0, mmCP_HQD_PQ_DOORBELL_CONTROL,
-	       mqd->cp_hqd_pq_doorbell_control);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_DOORBELL_CONTROL,
+	       mqd->cp_hqd_pq_doorbell_control, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* reset read and write pointers, similar to CP_RB0_WPTR/_RPTR */
-	WREG32_SOC15(GC, 0, mmCP_HQD_PQ_WPTR_LO,
-	       mqd->cp_hqd_pq_wptr_lo);
-	WREG32_SOC15(GC, 0, mmCP_HQD_PQ_WPTR_HI,
-	       mqd->cp_hqd_pq_wptr_hi);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_WPTR_LO,
+	       mqd->cp_hqd_pq_wptr_lo, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PQ_WPTR_HI,
+	       mqd->cp_hqd_pq_wptr_hi, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* set the vmid for the queue */
-	WREG32_SOC15(GC, 0, mmCP_HQD_VMID, mqd->cp_hqd_vmid);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_VMID, mqd->cp_hqd_vmid, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
-	WREG32_SOC15(GC, 0, mmCP_HQD_PERSISTENT_STATE,
-	       mqd->cp_hqd_persistent_state);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_PERSISTENT_STATE,
+	       mqd->cp_hqd_persistent_state, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	/* activate the queue */
-	WREG32_SOC15(GC, 0, mmCP_HQD_ACTIVE,
-	       mqd->cp_hqd_active);
+	WREG32_SOC15_GRBM(GC, 0, mmCP_HQD_ACTIVE,
+	       mqd->cp_hqd_active, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	if (ring->use_doorbell)
-		WREG32_FIELD15(GC, 0, CP_PQ_STATUS, DOORBELL_ENABLE, 1);
+		WREG32_FIELD15_GRBM(GC, 0, CP_PQ_STATUS, DOORBELL_ENABLE, 1, AMDGPU_REGS_GRBM_CNTL, adev->grbm_gfx_cntl);
 
 	return 0;
 }
