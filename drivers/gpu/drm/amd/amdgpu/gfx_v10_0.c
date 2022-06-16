@@ -1514,7 +1514,7 @@ static bool gfx_v10_get_rlcg_flag(struct amdgpu_device *adev, u32 acc_flags, u32
 	return false;
 }
 
-static u32 gfx_v10_rlcg_rw(struct amdgpu_device *adev, u32 offset, u32 v, uint32_t flag)
+static u32 gfx_v10_rlcg_rw(struct amdgpu_device *adev, u32 offset, u32 v, uint32_t flag, u32 select, u32 shadow)
 {
 	static void *scratch_reg0;
 	static void *scratch_reg1;
@@ -1555,6 +1555,16 @@ static u32 gfx_v10_rlcg_rw(struct amdgpu_device *adev, u32 offset, u32 v, uint32
 	} else {
 		writel(v, scratch_reg0);
 		writel(offset | flag, scratch_reg1);
+		switch (select) {
+			case AMDGPU_REGS_GRBM_CNTL:
+				writel(shadow, scratch_reg2);
+				break;
+			case AMDGPU_REGS_GRBM_IDX:
+				writel(shadow, scratch_reg3);
+				break;
+			default:
+				break;
+		}
 		writel(1, spare_int);
 
 		if (offset == grbm_cntl)
@@ -1588,13 +1598,13 @@ static u32 gfx_v10_rlcg_rw(struct amdgpu_device *adev, u32 offset, u32 v, uint32
 	return ret;
 }
 
-static void gfx_v10_sriov_wreg(struct amdgpu_device *adev, u32 offset, u32 value, u32 acc_flags, u32 hwip)
+static void gfx_v10_sriov_wreg(struct amdgpu_device *adev, u32 offset, u32 value, u32 acc_flags, u32 hwip, u32 select, u32 shadow)
 {
 	u32 rlcg_flag;
 
 	if (!amdgpu_sriov_runtime(adev) &&
 	    gfx_v10_get_rlcg_flag(adev, acc_flags, hwip, 1, &rlcg_flag)) {
-		gfx_v10_rlcg_rw(adev, offset, value, rlcg_flag);
+		gfx_v10_rlcg_rw(adev, offset, value, rlcg_flag, select, shadow);
 		return;
 	}
 
@@ -1604,13 +1614,13 @@ static void gfx_v10_sriov_wreg(struct amdgpu_device *adev, u32 offset, u32 value
 		WREG32(offset, value);
 }
 
-static u32 gfx_v10_sriov_rreg(struct amdgpu_device *adev, u32 offset, u32 acc_flags, u32 hwip)
+static u32 gfx_v10_sriov_rreg(struct amdgpu_device *adev, u32 offset, u32 acc_flags, u32 hwip, u32 select, u32 shadow)
 {
 	u32 rlcg_flag;
 
 	if (!amdgpu_sriov_runtime(adev) &&
 	    gfx_v10_get_rlcg_flag(adev, acc_flags, hwip, 0, &rlcg_flag))
-		return gfx_v10_rlcg_rw(adev, offset, 0, rlcg_flag);
+		return gfx_v10_rlcg_rw(adev, offset, 0, rlcg_flag, select, shadow);
 
 	if (acc_flags & AMDGPU_REGS_NO_KIQ)
 		return RREG32_NO_KIQ(offset);

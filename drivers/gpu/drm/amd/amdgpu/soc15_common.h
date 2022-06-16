@@ -27,51 +27,59 @@
 /* Register Access Macros */
 #define SOC15_REG_OFFSET(ip, inst, reg)	(adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg)
 
-#define __WREG32_SOC15_RLC__(reg, value, flag, hwip) \
+#define __WREG32_SOC15_RLC__(reg, value, flag, hwip, select, shadow) \
 	((amdgpu_sriov_vf(adev) && adev->gfx.rlc.funcs && adev->gfx.rlc.funcs->sriov_wreg) ? \
-	 adev->gfx.rlc.funcs->sriov_wreg(adev, reg, value, flag, hwip) : \
+	 adev->gfx.rlc.funcs->sriov_wreg(adev, reg, value, flag, hwip, select, shadow) : \
 	 WREG32(reg, value))
 
-#define __RREG32_SOC15_RLC__(reg, flag, hwip) \
+#define __RREG32_SOC15_RLC__(reg, flag, hwip, select, shadow) \
 	((amdgpu_sriov_vf(adev) && adev->gfx.rlc.funcs && adev->gfx.rlc.funcs->sriov_rreg) ? \
-	 adev->gfx.rlc.funcs->sriov_rreg(adev, reg, flag, hwip) : \
+	 adev->gfx.rlc.funcs->sriov_rreg(adev, reg, flag, hwip, select, shadow) : \
 	 RREG32(reg))
 
 #define WREG32_FIELD15(ip, idx, reg, field, val)	\
 	 __WREG32_SOC15_RLC__(adev->reg_offset[ip##_HWIP][idx][mm##reg##_BASE_IDX] + mm##reg,	\
 				(__RREG32_SOC15_RLC__( \
 					adev->reg_offset[ip##_HWIP][idx][mm##reg##_BASE_IDX] + mm##reg, \
-					0, ip##_HWIP) & \
+					0, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0) & \
 				~REG_FIELD_MASK(reg, field)) | (val) << REG_FIELD_SHIFT(reg, field), \
-			      0, ip##_HWIP)
+			      0, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0)
 
 #define RREG32_SOC15(ip, inst, reg) \
 	__RREG32_SOC15_RLC__(adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg, \
-			 0, ip##_HWIP)
+			 0, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0)
 
-#define RREG32_SOC15_IP(ip, reg) __RREG32_SOC15_RLC__(reg, 0, ip##_HWIP)
+#define RREG32_SOC15_GRBM(ip, inst, reg, select, shadow) \
+	__RREG32_SOC15_RLC__(adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg, \
+			 0, ip##_HWIP, select, shadow)
+
+#define RREG32_SOC15_IP(ip, reg) __RREG32_SOC15_RLC__(reg, 0, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0)
 
 #define RREG32_SOC15_NO_KIQ(ip, inst, reg) \
 	__RREG32_SOC15_RLC__(adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg, \
-			 AMDGPU_REGS_NO_KIQ, ip##_HWIP)
+			 AMDGPU_REGS_NO_KIQ, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0)
 
 #define RREG32_SOC15_OFFSET(ip, inst, reg, offset) \
-	 __RREG32_SOC15_RLC__((adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg) + offset, 0, ip##_HWIP)
+	 __RREG32_SOC15_RLC__((adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg) + offset, 0, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0)
 
 #define WREG32_SOC15(ip, inst, reg, value) \
 	 __WREG32_SOC15_RLC__((adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg), \
-			  value, 0, ip##_HWIP)
+			  value, 0, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0)
+
+#define WREG32_SOC15_GRBM(ip, inst, reg, value, select, shadow) \
+	 __WREG32_SOC15_RLC__((adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg), \
+			  value, 0, ip##_HWIP, select, shadow)
 
 #define WREG32_SOC15_IP(ip, reg, value) \
-	 __WREG32_SOC15_RLC__(reg, value, 0, ip##_HWIP)
+	 __WREG32_SOC15_RLC__(reg, value, 0, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0)
 
 #define WREG32_SOC15_NO_KIQ(ip, inst, reg, value) \
 	__WREG32_SOC15_RLC__(adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg, \
-			     value, AMDGPU_REGS_NO_KIQ, ip##_HWIP)
+			     value, AMDGPU_REGS_NO_KIQ, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0)
 
 #define WREG32_SOC15_OFFSET(ip, inst, reg, offset, value) \
 	 __WREG32_SOC15_RLC__((adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg) + offset, \
-			  value, 0, ip##_HWIP)
+			  value, 0, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0)
 
 #define SOC15_WAIT_ON_RREG(ip, inst, reg, expected_value, mask) \
 ({	int ret = 0;						\
@@ -100,7 +108,7 @@
 })
 
 #define WREG32_RLC(reg, value) \
-	__WREG32_SOC15_RLC__(reg, value, AMDGPU_REGS_RLC, GC_HWIP)
+	__WREG32_SOC15_RLC__(reg, value, AMDGPU_REGS_RLC, GC_HWIP, AMDGPU_REGS_NO_GRBM, 0)
 
 #define WREG32_RLC_EX(prefix, reg, value) \
 	do {							\
@@ -128,17 +136,17 @@
 
 /* shadow the registers in the callback function */
 #define WREG32_SOC15_RLC_SHADOW(ip, inst, reg, value) \
-	__WREG32_SOC15_RLC__((adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg), value, AMDGPU_REGS_RLC, GC_HWIP)
+	__WREG32_SOC15_RLC__((adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg), value, AMDGPU_REGS_RLC, GC_HWIP, AMDGPU_REGS_NO_GRBM, 0)
 
 /* for GC only */
 #define RREG32_RLC(reg) \
-	__RREG32_SOC15_RLC__(reg, AMDGPU_REGS_RLC, GC_HWIP)
+	__RREG32_SOC15_RLC__(reg, AMDGPU_REGS_RLC, GC_HWIP, AMDGPU_REGS_NO_GRBM, 0)
 
 #define WREG32_RLC_NO_KIQ(reg, value, hwip) \
-	__WREG32_SOC15_RLC__(reg, value, AMDGPU_REGS_NO_KIQ | AMDGPU_REGS_RLC, hwip)
+	__WREG32_SOC15_RLC__(reg, value, AMDGPU_REGS_NO_KIQ | AMDGPU_REGS_RLC, hwip, AMDGPU_REGS_NO_GRBM, 0)
 
 #define RREG32_RLC_NO_KIQ(reg, hwip) \
-	__RREG32_SOC15_RLC__(reg, AMDGPU_REGS_NO_KIQ | AMDGPU_REGS_RLC, hwip)
+	__RREG32_SOC15_RLC__(reg, AMDGPU_REGS_NO_KIQ | AMDGPU_REGS_RLC, hwip, AMDGPU_REGS_NO_GRBM, 0)
 
 #define WREG32_SOC15_RLC_SHADOW_EX(prefix, ip, inst, reg, value) \
 	do {							\
@@ -159,12 +167,12 @@
 	} while (0)
 
 #define RREG32_SOC15_RLC(ip, inst, reg) \
-	__RREG32_SOC15_RLC__(adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg, AMDGPU_REGS_RLC, ip##_HWIP)
+	__RREG32_SOC15_RLC__(adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg, AMDGPU_REGS_RLC, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0)
 
 #define WREG32_SOC15_RLC(ip, inst, reg, value) \
 	do {							\
 		uint32_t target_reg = adev->reg_offset[ip##_HWIP][0][reg##_BASE_IDX] + reg;\
-		__WREG32_SOC15_RLC__(target_reg, value, AMDGPU_REGS_RLC, ip##_HWIP); \
+		__WREG32_SOC15_RLC__(target_reg, value, AMDGPU_REGS_RLC, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0); \
 	} while (0)
 
 #define WREG32_SOC15_RLC_EX(prefix, ip, inst, reg, value) \
@@ -176,14 +184,14 @@
 #define WREG32_FIELD15_RLC(ip, idx, reg, field, val)   \
 	__WREG32_SOC15_RLC__((adev->reg_offset[ip##_HWIP][idx][mm##reg##_BASE_IDX] + mm##reg), \
 			     (__RREG32_SOC15_RLC__(adev->reg_offset[ip##_HWIP][idx][mm##reg##_BASE_IDX] + mm##reg, \
-						   AMDGPU_REGS_RLC, ip##_HWIP) & \
+						   AMDGPU_REGS_RLC, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0) & \
 			      ~REG_FIELD_MASK(reg, field)) | (val) << REG_FIELD_SHIFT(reg, field), \
-			     AMDGPU_REGS_RLC, ip##_HWIP)
+			     AMDGPU_REGS_RLC, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0)
 
 #define WREG32_SOC15_OFFSET_RLC(ip, inst, reg, offset, value) \
-	__WREG32_SOC15_RLC__((adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg) + offset, value, AMDGPU_REGS_RLC, ip##_HWIP)
+	__WREG32_SOC15_RLC__((adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg) + offset, value, AMDGPU_REGS_RLC, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0)
 
 #define RREG32_SOC15_OFFSET_RLC(ip, inst, reg, offset) \
-	__RREG32_SOC15_RLC__((adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg) + offset, AMDGPU_REGS_RLC, ip##_HWIP)
+	__RREG32_SOC15_RLC__((adev->reg_offset[ip##_HWIP][inst][reg##_BASE_IDX] + reg) + offset, AMDGPU_REGS_RLC, ip##_HWIP, AMDGPU_REGS_NO_GRBM, 0)
 
 #endif
