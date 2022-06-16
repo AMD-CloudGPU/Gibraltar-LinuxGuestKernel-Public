@@ -5045,6 +5045,7 @@ static void gfx_v10_0_select_se_sh(struct amdgpu_device *adev, u32 se_num,
 	else
 		data = REG_SET_FIELD(data, GRBM_GFX_INDEX, SA_INDEX, sh_num);
 
+	adev->grbm_index = data;
 	WREG32_SOC15(GC, 0, mmGRBM_GFX_INDEX, data);
 }
 
@@ -5052,8 +5053,8 @@ static u32 gfx_v10_0_get_rb_active_bitmap(struct amdgpu_device *adev)
 {
 	u32 data, mask;
 
-	data = RREG32_SOC15(GC, 0, mmCC_RB_BACKEND_DISABLE);
-	data |= RREG32_SOC15(GC, 0, mmGC_USER_RB_BACKEND_DISABLE);
+	data = RREG32_SOC15_GRBM(GC, 0, mmCC_RB_BACKEND_DISABLE, AMDGPU_REGS_GRBM_IDX, adev->grbm_index);
+	data |= RREG32_SOC15_GRBM(GC, 0, mmGC_USER_RB_BACKEND_DISABLE, AMDGPU_REGS_GRBM_IDX, adev->grbm_index);
 
 	data &= CC_RB_BACKEND_DISABLE__BACKEND_DISABLE_MASK;
 	data >>= GC_USER_RB_BACKEND_DISABLE__BACKEND_DISABLE__SHIFT;
@@ -5235,17 +5236,17 @@ static void gfx_v10_0_tcp_harvest(struct amdgpu_device *adev)
 				}
 			}
 
-			tmp = RREG32_SOC15(GC, 0, mmUTCL1_UTCL0_INVREQ_DISABLE);
+			tmp = RREG32_SOC15_GRBM(GC, 0, mmUTCL1_UTCL0_INVREQ_DISABLE, AMDGPU_REGS_GRBM_IDX, adev->grbm_index);
 			/* only override TCP & SQC bits */
 			tmp &= (0xffffffffU << (4 * max_wgp_per_sh));
 			tmp |= (utcl_invreq_disable & utcl_invreq_disable_mask);
-			WREG32_SOC15(GC, 0, mmUTCL1_UTCL0_INVREQ_DISABLE, tmp);
+			WREG32_SOC15_GRBM(GC, 0, mmUTCL1_UTCL0_INVREQ_DISABLE, tmp, AMDGPU_REGS_GRBM_IDX, adev->grbm_index);
 
-			tmp = RREG32_SOC15(GC, 0, mmGCRD_SA_TARGETS_DISABLE);
+			tmp = RREG32_SOC15_GRBM(GC, 0, mmGCRD_SA_TARGETS_DISABLE, AMDGPU_REGS_GRBM_IDX, adev->grbm_index);
 			/* only override TCP & SQC bits */
 			tmp &= (0xffffffffU << (3 * max_wgp_per_sh));
 			tmp |= (gcrd_targets_disable_tcp & gcrd_targets_disable_mask);
-			WREG32_SOC15(GC, 0, mmGCRD_SA_TARGETS_DISABLE, tmp);
+			WREG32_SOC15_GRBM(GC, 0, mmGCRD_SA_TARGETS_DISABLE, tmp, AMDGPU_REGS_GRBM_IDX, adev->grbm_index);
 		}
 	}
 
@@ -9594,7 +9595,7 @@ static void gfx_v10_0_set_user_wgp_inactive_bitmap_per_sh(struct amdgpu_device *
 	data = bitmap << GC_USER_SHADER_ARRAY_CONFIG__INACTIVE_WGPS__SHIFT;
 	data &= GC_USER_SHADER_ARRAY_CONFIG__INACTIVE_WGPS_MASK;
 
-	WREG32_SOC15(GC, 0, mmGC_USER_SHADER_ARRAY_CONFIG, data);
+	WREG32_SOC15_GRBM(GC, 0, mmGC_USER_SHADER_ARRAY_CONFIG, data, AMDGPU_REGS_GRBM_IDX, adev->grbm_index);
 }
 
 static u32 gfx_v10_0_get_wgp_active_bitmap_per_sh(struct amdgpu_device *adev)
@@ -9604,11 +9605,11 @@ static u32 gfx_v10_0_get_wgp_active_bitmap_per_sh(struct amdgpu_device *adev)
 	u32 efuse_setting = 0;
 	u32 vbios_setting = 0;
 
-	efuse_setting = RREG32_SOC15(GC, 0, mmCC_GC_SHADER_ARRAY_CONFIG);
+	efuse_setting = RREG32_SOC15_GRBM(GC, 0, mmCC_GC_SHADER_ARRAY_CONFIG, AMDGPU_REGS_GRBM_IDX, adev->grbm_index);
 	efuse_setting &= CC_GC_SHADER_ARRAY_CONFIG__INACTIVE_WGPS_MASK;
 	efuse_setting >>= CC_GC_SHADER_ARRAY_CONFIG__INACTIVE_WGPS__SHIFT;
 
-	vbios_setting = RREG32_SOC15(GC, 0, mmGC_USER_SHADER_ARRAY_CONFIG);
+	vbios_setting = RREG32_SOC15_GRBM(GC, 0, mmGC_USER_SHADER_ARRAY_CONFIG, AMDGPU_REGS_GRBM_IDX, adev->grbm_index);
 	vbios_setting &= GC_USER_SHADER_ARRAY_CONFIG__INACTIVE_WGPS_MASK;
 	vbios_setting >>= GC_USER_SHADER_ARRAY_CONFIG__INACTIVE_WGPS__SHIFT;
 
