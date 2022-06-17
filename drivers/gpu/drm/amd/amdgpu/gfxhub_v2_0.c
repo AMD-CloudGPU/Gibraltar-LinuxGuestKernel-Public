@@ -170,7 +170,7 @@ static void gfxhub_v2_0_init_system_aperture_regs(struct amdgpu_device *adev)
 			     (u32)(value >> 12));
 		WREG32_SOC15(GC, 0, mmGCMC_VM_SYSTEM_APERTURE_DEFAULT_ADDR_MSB,
 			     (u32)(value >> 44));
-	}
+	
 
 	/* Program "protection fault". */
 	WREG32_SOC15(GC, 0, mmGCVM_L2_PROTECTION_FAULT_DEFAULT_ADDR_LO32,
@@ -180,6 +180,7 @@ static void gfxhub_v2_0_init_system_aperture_regs(struct amdgpu_device *adev)
 
 	WREG32_FIELD15(GC, 0, GCVM_L2_PROTECTION_FAULT_CNTL2,
 		       ACTIVE_PAGE_MIGRATION_PTE_READ_RETRY, 1);
+	}
 }
 
 
@@ -266,6 +267,8 @@ static void gfxhub_v2_0_enable_system_domain(struct amdgpu_device *adev)
 
 static void gfxhub_v2_0_disable_identity_aperture(struct amdgpu_device *adev)
 {
+	if (amdgpu_sriov_vf(adev))
+		return;
 	WREG32_SOC15(GC, 0, mmGCVM_L2_CONTEXT1_IDENTITY_APERTURE_LOW_ADDR_LO32,
 		     0xFFFFFFFF);
 	WREG32_SOC15(GC, 0, mmGCVM_L2_CONTEXT1_IDENTITY_APERTURE_LOW_ADDR_HI32,
@@ -391,6 +394,8 @@ static void gfxhub_v2_0_gart_disable(struct amdgpu_device *adev)
 static void gfxhub_v2_0_set_fault_enable_default(struct amdgpu_device *adev,
 					  bool value)
 {
+	if (amdgpu_sriov_vf(adev))
+		return;
 	u32 tmp;
 	tmp = RREG32_SOC15(GC, 0, mmGCVM_L2_PROTECTION_FAULT_CNTL);
 	tmp = REG_SET_FIELD(tmp, GCVM_L2_PROTECTION_FAULT_CNTL,

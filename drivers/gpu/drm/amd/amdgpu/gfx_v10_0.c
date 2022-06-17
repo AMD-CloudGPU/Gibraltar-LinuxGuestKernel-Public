@@ -1438,6 +1438,7 @@ static const struct soc15_reg_golden golden_settings_gc_10_1_1[] =
 
 static const struct soc15_reg_golden golden_settings_gc_10_1_2[] =
 {
+#if 0
 	SOC15_REG_GOLDEN_VALUE(GC, 0, mmCB_HW_CONTROL_4, 0x003e001f, 0x003c0014),
 	SOC15_REG_GOLDEN_VALUE(GC, 0, mmCGTT_GS_NGG_CLK_CTRL, 0xffff8fff, 0xffff8100),
 	SOC15_REG_GOLDEN_VALUE(GC, 0, mmCGTT_IA_CLK_CTRL, 0xffff0fff, 0xffff0100),
@@ -1480,6 +1481,7 @@ static const struct soc15_reg_golden golden_settings_gc_10_1_2[] =
 	SOC15_REG_GOLDEN_VALUE(GC, 0, mmTA_CNTL_AUX, 0xfff7ffff, 0x01030000),
 	SOC15_REG_GOLDEN_VALUE(GC, 0, mmTCP_CNTL, 0xffdf80ff, 0x479c0010),
 	SOC15_REG_GOLDEN_VALUE(GC, 0, mmUTCL1_CTRL, 0xffffffff, 0x00c00000)
+#endif
 };
 
 static bool gfx_v10_get_rlcg_flag(struct amdgpu_device *adev, u32 acc_flags, u32 hwip,
@@ -1524,7 +1526,7 @@ static u32 gfx_v10_rlcg_rw(struct amdgpu_device *adev, u32 offset, u32 v, uint32
 	static uint32_t grbm_cntl;
 	static uint32_t grbm_idx;
 	uint32_t i = 0;
-	uint32_t retries = 50000;
+	uint32_t retries = 500;
 	u32 ret = 0;
 	u32 tmp;
 
@@ -1565,14 +1567,13 @@ static u32 gfx_v10_rlcg_rw(struct amdgpu_device *adev, u32 offset, u32 v, uint32
 			default:
 				break;
 		}
-		writel(1, spare_int);
-
 		if (offset == grbm_cntl)
 			writel(v, scratch_reg2);
+		writel(1, spare_int);
 
 		for (i = 0; i < retries; i++) {
 			tmp = readl(scratch_reg1);
-			if (!(tmp & flag))
+			if (tmp == 0)
 				break;
 
 			udelay(10);
@@ -5241,12 +5242,13 @@ static void gfx_v10_0_tcp_harvest(struct amdgpu_device *adev)
 			tmp &= (0xffffffffU << (4 * max_wgp_per_sh));
 			tmp |= (utcl_invreq_disable & utcl_invreq_disable_mask);
 			WREG32_SOC15_GRBM(GC, 0, mmUTCL1_UTCL0_INVREQ_DISABLE, tmp, AMDGPU_REGS_GRBM_IDX, adev->grbm_index);
-
-			tmp = RREG32_SOC15_GRBM(GC, 0, mmGCRD_SA_TARGETS_DISABLE, AMDGPU_REGS_GRBM_IDX, adev->grbm_index);
-			/* only override TCP & SQC bits */
-			tmp &= (0xffffffffU << (3 * max_wgp_per_sh));
-			tmp |= (gcrd_targets_disable_tcp & gcrd_targets_disable_mask);
-			WREG32_SOC15_GRBM(GC, 0, mmGCRD_SA_TARGETS_DISABLE, tmp, AMDGPU_REGS_GRBM_IDX, adev->grbm_index);
+			if (!amdgpu_sriov_vf(adev)) {
+				tmp = RREG32_SOC15_GRBM(GC, 0, mmGCRD_SA_TARGETS_DISABLE, AMDGPU_REGS_GRBM_IDX, adev->grbm_index);
+				/* only override TCP & SQC bits */
+				tmp &= (0xffffffffU << (3 * max_wgp_per_sh));
+				tmp |= (gcrd_targets_disable_tcp & gcrd_targets_disable_mask);
+				WREG32_SOC15_GRBM(GC, 0, mmGCRD_SA_TARGETS_DISABLE, tmp, AMDGPU_REGS_GRBM_IDX, adev->grbm_index);
+			}
 		}
 	}
 
@@ -5277,7 +5279,8 @@ static void gfx_v10_0_constants_init(struct amdgpu_device *adev)
 	u32 tmp;
 	int i;
 
-	WREG32_FIELD15(GC, 0, GRBM_CNTL, READ_TIMEOUT, 0xff);
+	if (!amdgpu_sriov_vf(adev))
+		WREG32_FIELD15(GC, 0, GRBM_CNTL, READ_TIMEOUT, 0xff);
 
 	gfx_v10_0_setup_rb(adev);
 	gfx_v10_0_get_cu_info(adev, &adev->gfx.cu_info);
@@ -5356,6 +5359,8 @@ static void gfx_v10_0_rlc_stop(struct amdgpu_device *adev)
 {
 	u32 tmp = RREG32_SOC15(GC, 0, mmRLC_CNTL);
 
+	if (amdgpu_sriov_vf(adev))
+		return;
 	tmp = REG_SET_FIELD(tmp, RLC_CNTL, RLC_ENABLE_F32, 0);
 	WREG32_SOC15(GC, 0, mmRLC_CNTL, tmp);
 }
@@ -7311,7 +7316,8 @@ static void gfx_v10_0_cp_enable(struct amdgpu_device *adev, bool enable)
 static bool gfx_v10_0_check_grbm_cam_remapping(struct amdgpu_device *adev)
 {
 	uint32_t data, pattern = 0xDEADBEEF;
-
+	if (amdgpu_sriov_vf(adev))
+		return true;
 	/* check if mmVGT_ESGS_RING_SIZE_UMD
 	 * has been remapped to mmVGT_ESGS_RING_SIZE */
 	switch (adev->asic_type) {
