@@ -795,7 +795,7 @@ static void gmc_v9_0_flush_gpu_tlb(struct amdgpu_device *adev, uint32_t vmid,
 		}
 
 		if (j >= adev->usec_timeout)
-			DRM_ERROR("Timeout waiting for sem acquire in VM flush!\n");
+			DRM_INFO("Timeout waiting for sem acquire in VM flush!\n");
 	}
 
 	do {
