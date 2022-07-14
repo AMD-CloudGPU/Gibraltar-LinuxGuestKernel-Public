@@ -56,7 +56,6 @@ static enum hrtimer_restart amdgpu_vkms_vblank_simulate(struct hrtimer *timer)
 		DRM_WARN("%s: vblank timer overrun\n", __func__);
 
 	ret = drm_crtc_handle_vblank(crtc);
-	WARN_ON(ret_overrun != 1);
 
 	return HRTIMER_RESTART;
 }
